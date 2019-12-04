@@ -9,6 +9,7 @@ dependencies:
 - text-show == 3.8.2
 - containers == 0.6.0.1
 - split == 0.2.3.3
+- mtl == 2.2.2
 
 library:
   source-dirs: src
