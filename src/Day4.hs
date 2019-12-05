@@ -10,10 +10,10 @@ hasAdjacentDups (d1:d2:digits)
 hasAdjacentDups _ = False
 
 hasAdjacentDups2 found (d1:d2:digits)
-  | d1 == d2  = hasAdjacentDups2 (found+1) (d2:digits)
-  | found == 1 = True 
-  | otherwise = hasAdjacentDups2 0 (d2:digits)
-hasAdjacentDups2 found _ = found == 1
+  | d1 == d2  = hasAdjacentDups2 True (d2:digits)
+  | found  = True 
+  | otherwise = hasAdjacentDups2 False (d2:digits)
+hasAdjacentDups2 found _ = found
 
 isAscending (d1:d2:digits)
   | d1 > d2   = False 
@@ -21,7 +21,7 @@ isAscending (d1:d2:digits)
 isAscending _ = True
 
 validPasswords = filter (liftM2 (&&) hasAdjacentDups isAscending)
-validPasswords2 = filter (liftM2 (&&) (hasAdjacentDups2 0) isAscending)
+validPasswords2 = filter (liftM2 (&&) (hasAdjacentDups2 False) isAscending)
 
 numberToDigits :: Int -> [Int]
 numberToDigits = map digitToInt . show

@@ -1,5 +1,5 @@
 module Main where
-
+import Day4
 
 main :: IO ()
-main = pure ()
+main = print solve2
