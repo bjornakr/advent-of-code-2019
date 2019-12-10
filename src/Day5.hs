@@ -94,8 +94,8 @@ evax p@(Program pos is inp outp) =
               '2' -> (MUL, 4)
               '3' -> (STR, 2)
               '4' -> (OUT, 2)
-              '5' -> (JMPT, 2)
-              '6' -> (JMPF, 2)
+              '5' -> (JMPT, 3)
+              '6' -> (JMPF, 3)
               '7' -> (LTX, 4)
               '8' -> (EQX, 4)
     modes = (map parseParamMode (drop 2 opStr)) ++ [P,P] --(repeat P)
@@ -133,10 +133,14 @@ p99 = Program 0 t99 (Input [1]) (Output [])
 -- eval (Op (m:modes)) (Program _ i:is) =
 
 t201 = [3,9,8,9,10,9,4,9,99,-1,8]
-p201 = Program 0 t201 (Input [7]) (Output [])
+p201 = Program 0 t201 (Input [8]) (Output [])
 
 t202 = [3,9,7,9,10,9,4,9,99,-1,8]
-p202 = Program 0 t201 (Input [7]) (Output [])
+p202 = Program 0 t201 (Input [8]) (Output [])
+
+t209 = [3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99]
+p209 = Program 0 t209 (Input [8]) (Output [])
+
 
 p299 = Program 0 t99 (Input [5]) (Output [])
 -- 1002,4,3,4,33
