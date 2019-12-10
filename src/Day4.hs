@@ -3,17 +3,16 @@ module Day4 where
 import Data.Char (digitToInt)
 import Control.Monad
 import Control.Monad.Reader
+import Data.List
 
 hasAdjacentDups (d1:d2:digits)
   | d1 == d2  = True
   | otherwise = hasAdjacentDups (d2:digits)
 hasAdjacentDups _ = False
 
-hasAdjacentDups2 found (d1:d2:digits)
-  | d1 == d2  = hasAdjacentDups2 True (d2:digits)
-  | found  = True 
-  | otherwise = hasAdjacentDups2 False (d2:digits)
-hasAdjacentDups2 found _ = found
+hasAdjacentDups3 digits =
+  let isStrictDup ds = (length ds) == 2 in
+  any isStrictDup (group digits)
 
 isAscending (d1:d2:digits)
   | d1 > d2   = False 
@@ -21,11 +20,11 @@ isAscending (d1:d2:digits)
 isAscending _ = True
 
 validPasswords = filter (liftM2 (&&) hasAdjacentDups isAscending)
-validPasswords2 = filter (liftM2 (&&) (hasAdjacentDups2 False) isAscending)
+validPasswords3 = filter (liftM2 (&&) hasAdjacentDups3 isAscending)
 
 numberToDigits :: Int -> [Int]
 numberToDigits = map digitToInt . show
 
 solve1 = length $ validPasswords (map numberToDigits [246515..739105])
-solve2 = length $ validPasswords2 (map numberToDigits [246515..739105])
+solve3 = length $ validPasswords3 (map numberToDigits [246515..739105])
 
