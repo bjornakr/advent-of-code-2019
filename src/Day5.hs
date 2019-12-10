@@ -8,7 +8,7 @@ data Program = Program OpCodePos [Int] Input Output deriving (Eq, Show)
 data ParamMode = P | I deriving (Eq, Show)
 --data Op = Op [ParamMode] deriving (Eq, Show)
 -- data Opcode = ADD Int Int Int | MUL Int Int Int | STR Addr | OUT Addr
-data Opcode = ADD | MUL | STR | OUT deriving (Eq, Show)
+data Opcode = ADD | MUL | STR | OUT | JMPT | JMPF | LTX | EQX deriving (Eq, Show)
 
 replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
@@ -22,6 +22,13 @@ get mode i is =
   case mode of
     P -> is !! i
     I -> i
+
+getx :: ParamMode -> Addr -> [Int] -> Int
+getx mode addr is =
+  let val = is !! addr in
+    case mode of
+      P -> is !! val
+      I -> val
 
 -- mul :: (ParamMode, Int) -> (ParamMode, Int) -> [Int] -> Int
 mul op (mx, x) (my, y) is =
@@ -52,11 +59,31 @@ out (Program pos is inp (Output outps)) =
   in
     Program pos is inp (Output (res:outps))
 
+jmp predicate (m0:m1:_) (Program pos is inp outp) =
+  let
+    p0 = getx m0 (pos+1) is
+    p1 = getx m1 (pos+2) is
+    pos' = if (predicate p0) then p1 else pos
+  in
+    Program pos' is inp outp
+
+cond op (m0:m1:_) (Program pos is inp outp) =
+  let
+    p0 = getx m0 (pos+1) is
+    p1 = getx m1 (pos+2) is
+    p2 = is !! (pos+3)
+    res = if p0 `op` p1 then 1 else 0
+    is' = replace p2 res is
+  in
+    Program pos is' inp outp
+  
 
 parseParamMode '0' = P
 parseParamMode '1' = I
     
 step count (Program pos is inp outp) = Program (pos + count) is inp outp
+
+getPos (Program pos _ _ _) = pos
 
 evax :: Program -> Program
 evax p@(Program pos is inp outp) =
@@ -67,6 +94,10 @@ evax p@(Program pos is inp outp) =
               '2' -> (MUL, 4)
               '3' -> (STR, 2)
               '4' -> (OUT, 2)
+              '5' -> (JMPT, 2)
+              '6' -> (JMPF, 2)
+              '7' -> (LTX, 4)
+              '8' -> (EQX, 4)
     modes = (map parseParamMode (drop 2 opStr)) ++ [P,P] --(repeat P)
     res :: Program
     res = case op of
@@ -74,8 +105,14 @@ evax p@(Program pos is inp outp) =
             MUL -> mulx (*) modes p
             STR -> str p
             OUT -> out p
+            JMPT -> jmp ((>) 0) modes p
+            JMPF -> jmp ((==) 0) modes p
+            LTX -> cond (<) modes p
+            EQX -> cond (==) modes p
+    posHasChanged = (getPos res) /= pos 
+
   in
-    step stepCount res
+    if posHasChanged then res else step stepCount res
     
 
 run p@(Program opCodePos intcodes inp outp) =
@@ -95,8 +132,13 @@ t99 = [3,225,1,225,6,6,1100,1,238,225,104,0,1102,91,92,225,1102,85,13,225,1,47,1
 p99 = Program 0 t99 (Input [1]) (Output [])
 -- eval (Op (m:modes)) (Program _ i:is) =
 
+t201 = [3,9,8,9,10,9,4,9,99,-1,8]
+p201 = Program 0 t201 (Input [7]) (Output [])
 
+t202 = [3,9,7,9,10,9,4,9,99,-1,8]
+p202 = Program 0 t201 (Input [7]) (Output [])
 
+p299 = Program 0 t99 (Input [5]) (Output [])
 -- 1002,4,3,4,33
 
 -- MUL 
