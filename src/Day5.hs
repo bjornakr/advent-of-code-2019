@@ -98,14 +98,14 @@ evax p@(Program pos is inp outp) =
               '6' -> (JMPF, 3)
               '7' -> (LTX, 4)
               '8' -> (EQX, 4)
-    modes = (map parseParamMode (drop 2 opStr)) ++ [P,P] --(repeat P)
+    modes = (map parseParamMode (drop 2 opStr)) ++ [P,P,P,P] --(repeat P)
     res :: Program
     res = case op of
             ADD -> mulx (+) modes p
             MUL -> mulx (*) modes p
             STR -> str p
             OUT -> out p
-            JMPT -> jmp ((>) 0) modes p
+            JMPT -> jmp (\i -> i > 0) modes p
             JMPF -> jmp ((==) 0) modes p
             LTX -> cond (<) modes p
             EQX -> cond (==) modes p
@@ -146,3 +146,9 @@ p299 = Program 0 t99 (Input [5]) (Output [])
 -- 1002,4,3,4,33
 
 -- MUL 
+--       0 1 2 3  4 5 6 7 8
+test0 = [5,4,5,99,1,6,4,8,99]
+-- JMP to address 6
+-- OUT 99
+
+ptest0 = Program 0 test0 (Input []) (Output [])
