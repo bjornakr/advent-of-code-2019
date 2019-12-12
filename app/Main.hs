@@ -1,5 +1,5 @@
 module Main where
-import Day4
+import Day3
 
 main :: IO ()
-main = print solve1
+main = Day3.main2
