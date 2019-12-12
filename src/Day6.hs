@@ -14,13 +14,15 @@ add (parent, val) (T a ts)
   | otherwise   =  (T a (map (add (parent, val)) ts))
 
 
-megaAdd [] [] t = t
-megaAdd [] retry t = megaAdd retry [] t
-megaAdd (cur@(center, obj):rest) retry t@(T a ts) =
+megaAdd [] [] _ t = t
+megaAdd [] retry lr t
+  | retry == lr = t
+  | otherwise = megaAdd retry [] retry t
+megaAdd (cur@(center, obj):rest) retry lr t@(T a ts) =
   let t' = add cur t in
     if t' == t 
-    then megaAdd rest (cur:retry) t'
-    else megaAdd rest retry t'
+    then megaAdd rest (cur:retry) lr t'
+    else megaAdd rest retry lr t'
 
 distToRoot :: Int -> Tree a -> Int
 distToRoot dist N = dist
@@ -41,5 +43,9 @@ parseOrbit s =
 
 main = do
   input0 <- parseLines parseOrbit "resources/Day6.dat"
-  let res = distToRoot 0 $ megaAdd input0 [] (create "COM")
+  let res = distToRoot 0 $ megaAdd input0 [] [] (create "COM")
   print res
+
+
+
+t0 = megaAdd (reverse (input ++ [("X", "C")])) [] [] (create "COM") 
