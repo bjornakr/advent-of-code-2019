@@ -61,9 +61,12 @@ trel2 = foldl (flip add) (create "COM") input
 -- trel3 = foldl (flip add) (create "21X")
 input = [("COM", "B"), ("B", "C"), ("C", "D"), ("D", "E"), ("E", "F"), ("B", "G"), ("G", "H"), ("D", "I"), ("E", "J"), ("J", "K"), ("K", "L")]
 
+input2 = [("COM", "B"), ("B", "C"), ("C", "D"), ("D", "E"), ("E", "F"), ("B", "G"), ("G", "H"), ("D", "I"), ("E", "J"), ("J", "K"), ("K", "L"), ("K", "YOU"), ("I", "SAN")]
+minput2 = mappifyInput input2
+
 pathTo :: String -> Map.Map String [String] -> [String] -> String -> Maybe [String]
 pathTo dest m steps cur
-  | cur == dest = Just $ cur:steps
+  | cur == dest = Just $ steps
   | otherwise =
     case Map.lookup cur m of
       Nothing -> Nothing
@@ -76,14 +79,15 @@ headOpt [] = Nothing
 headOpt (a:_) = Just a
 
 --shortestPath :: String -> String -> String -> Map.Map String [String] -> Maybe Int
-shortestPath cur dest1 dest2 m =
+shortestPath cur dest1 dest2 m =  -- broken, but output is correct
   do
     a <- pathTo dest1 m [] cur
     b <- pathTo dest2 m [] cur    
     let sa = Set.fromList a
     let sb = Set.fromList b
-    let c = Set.intersection sa sb
-    pure $ (length c)
+    let c = Set.union (Set.difference sa sb) (Set.difference sb sa)
+    pure $ length c
+    -- pure $ (length c, c, a, b)
 
 
 
