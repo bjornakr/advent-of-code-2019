@@ -4,7 +4,10 @@ type Addr = Int
 type OpCodePos = Int
 data Input = Input [Int] deriving (Eq, Show)
 data Output = Output [Int] deriving (Eq, Show)
-data Program = Program OpCodePos [Int] Input Output deriving (Eq, Show)
+data Program = 
+    Program OpCodePos [Int] Input Output  
+  | ExpectingInput OpCodePos [Int] Output
+  | Terminated OpCodePos [Int] Output deriving (Eq, Show)
 data ParamMode = P | I deriving (Eq, Show)
 data Opcode = ADD | MUL | STR | OUT | JMPT | JMPF | LTX | EQX deriving (Eq, Show)
 
@@ -25,8 +28,18 @@ updateCodes is' (Program pos is inp outp) =
   (Program pos is' inp outp)
 
 getPos (Program pos _ _ _) = pos
+getPos (ExpectingInput pos _ _) = pos
+
+addInput x (Program pos is (Input xs) outp) = Program pos is (Input (xs ++ [x])) outp
+addInput x (ExpectingInput pos is outp) = Program pos is (Input [x]) outp
+addInput _ (Terminated pos is outp) = error "input to terminated CPU" --Terminated pos is outp
 
 getOutput (Program _ _ _ (Output o)) = o
+getOutput (ExpectingInput _ _ (Output o)) = o
+
+pop (Program pos is inps (Output (o:os))) = (o, Program pos is inps (Output os))
+pop (ExpectingInput pos is (Output (o:os))) = (o, ExpectingInput pos is (Output os))
+pop (Terminated pos is (Output (o:os))) = (o, Terminated pos is (Output os))
 
 arithmetic op (mode1:mode2:_) program =
   let
@@ -39,6 +52,7 @@ arithmetic op (mode1:mode2:_) program =
   in
     updateCodes (replace storeAddr result codes) program
 
+str p@(Program pos is (Input []) outp) = ExpectingInput pos is outp
 str (Program pos is (Input (inp:inps)) outp) =
   let
     addr = (is !! (pos+1))
@@ -72,6 +86,7 @@ cond op (m0:m1:_) (Program pos is inp outp) =
     Program pos is' inp outp
   
 step count (Program pos is inp outp) = Program (pos + count) is inp outp
+step _ p@(ExpectingInput _ _ _) = p
 
 parseParamMode '0' = P
 parseParamMode '1' = I
@@ -107,10 +122,11 @@ evalOp p@(Program pos is inp outp) =
   in
     if hasJumped then res else step toNextOpcode res
     
-
+run p@(Terminated _ _ _) = p
+run p@(ExpectingInput _ _ _) = p
 run p@(Program opCodePos intcodes inp outp) =
   case intcodes !! opCodePos of
-    99 -> p
+    99 -> Terminated opCodePos intcodes outp
     _  -> run $ evalOp p
 
 progInit intcodes input = run $ Program 0 intcodes input (Output []) 
