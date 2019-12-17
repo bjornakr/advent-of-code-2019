@@ -1,37 +1,47 @@
 module IntCodeCpu where
 
 import Debug.Trace
+import qualified Data.Map.Strict as Map
 
 type Addr = Int
+type IntCode = Int
 type OpCodePos = Int
 type Offset = Int
+type Memory = Map.Map Addr IntCode
 newtype Input = Input [Int] deriving (Eq, Show)
 newtype Output = Output [Int] deriving (Eq, Show)
 data Program =
-    Program OpCodePos [Int] Input Output Offset
-  | ExpectingInput OpCodePos [Int] Output Offset
-  | Terminated OpCodePos [Int] Output deriving (Eq, Show)
+    Program OpCodePos Memory Input Output Offset
+  | ExpectingInput OpCodePos Memory Output Offset
+  | Terminated OpCodePos Memory Output deriving (Eq, Show)
 data ParamMode = POS | IMM | REL deriving (Eq, Show)
 data Opcode = ADD | MUL | STR | OUT | JMPT | JMPF | LTX | EQX | BAS deriving (Eq, Show)
 
-replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
+replace = Map.insert
 
+lookupx :: Addr -> Memory -> IntCode
+lookupx addr mem = 
+  case Map.lookup addr mem of
+    Nothing -> 0 --error $ "Invalid lookup: addr: " ++ show addr ++ ", " ++ show mem
+    Just a -> a
 
-getVal :: ParamMode -> Addr -> Offset -> [Int] -> Int
-getVal mode addr off codes =
-  let val = codes !! addr in
+getVal :: ParamMode -> Addr -> Offset -> Memory -> Int
+getVal mode addr off mem =
+  let val = lookupx addr mem in
     case mode of
-      POS -> codes !! val
+      POS -> lookupx val mem
       IMM -> val
-      REL -> codes !! (off + val)
+      REL -> lookupx (off + val) mem
 
+getAddr :: Addr -> Memory -> Int
+getAddr addr mem = getVal IMM addr 0 mem
 
 getCodes (Program _ is _ _ _) = is
 
 getOffset (Program _ _ _ _ off) = off
 
-updateCodes is' (Program pos is inp outp off) =
-  Program pos is' inp outp off
+setMemory mem1 (Program pos mem0 inp outp off) =
+  Program pos mem1 inp outp off
 
 getPos (Program pos _ _ _ _) = pos
 getPos (ExpectingInput pos _ _ _) = pos
@@ -57,12 +67,12 @@ arithmetic op (mode1:mode2:_) program =
     storeAddr = getVal IMM (pos + 3) offset codes
     result = p1 `op` p2
   in
-    updateCodes (replace storeAddr result codes) program
+    setMemory (replace storeAddr result codes) program
 
 str p@(Program pos is (Input []) outp off) = ExpectingInput pos is outp off
 str (Program pos is (Input (inp:inps)) outp off) =
   let
-    addr = (is !! (pos+1))
+    addr = getAddr (pos+1) is
     is' = replace addr inp is
     input' = Input inps
   in
@@ -86,7 +96,7 @@ cond op (m0:m1:_) (Program pos is inp outp off) =
   let
     p0 = getVal m0 (pos+1) off is
     p1 = getVal m1 (pos+2) off is
-    p2 = is !! (pos+3)
+    p2 = getAddr (pos+3) is
     res = if p0 `op` p1 then 1 else 0
     is' = replace p2 res is
   in
@@ -101,6 +111,7 @@ modBaseOffset (m0:_) (Program pos is inp outp off0) =
 
 
 step count (Program pos is inp outp off) = Program (pos + count) is inp outp off
+step _ p = error $ "step called on illegal state: " ++ (show p)
 --step _ p@(ExpectingInput _ _ _ _) = p
 
 parseParamMode '0' = POS
@@ -108,12 +119,12 @@ parseParamMode '1' = IMM
 parseParamMode '2' = REL
 
 evalOp :: Program -> Program
-evalOp p | trace (show p) False = undefined
+-- evalOp p | trace (show p) False = undefined
 evalOp p@(Program pos is inp outp off) =
   let
-    opStr = reverse $ show $ is !! pos
+    opStr = reverse $ show $ lookupx pos is
 
-    (op, toNextOpcode)   = case head opStr of
+    (op, stepsToNextOpcode)   = case head opStr of
               '1' -> (ADD, 4)
               '2' -> (MUL, 4)
               '3' -> (STR, 2)
@@ -140,16 +151,20 @@ evalOp p@(Program pos is inp outp off) =
 
     hasJumped = getPos res /= pos
   in
-    if hasJumped then res else step toNextOpcode res
+    if hasJumped then res else step stepsToNextOpcode res
 
 run p@Terminated{} = p
 run p@ExpectingInput{} = p
 run p@(Program opCodePos intcodes inp outp off) =
-  case intcodes !! opCodePos of
+  case lookupx opCodePos intcodes of
     99 -> Terminated opCodePos intcodes outp
     _  -> run $ evalOp p
 
-progInit intcodes input = run $ Program 0 intcodes input (Output []) 0
+progInit intcodes input = 
+  let
+    memory = Map.fromList ([0..] `zip` intcodes)
+  in
+    run $ Program 0 memory input (Output []) 0
 
 diagnose =
   let
